@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "presentation-design": {
+      "source": "jwynia/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/general/communication/presentation-design/SKILL.md",
+      "computedHash": "8fabe8c0e7028b444c5b8ebc3e4edc7a8e8baf74bd606dc51d03f1b38943bbfc"
+    },
+    "slidev": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/slidev/SKILL.md",
+      "computedHash": "4973bc1baf08fa1303f99ef3abce8ec3aedfb2637e4315de30a2421746b610e3"
+    },
+    "unocss": {
+      "source": "uni-helper/skills",
+      "sourceType": "github",
+      "skillPath": "skills/unocss/SKILL.md",
+      "computedHash": "e36abea303e47d96a4d97017c8146d4ccb996abaf52090aa048be2a291f1d326"
+    }
+  }
+}
