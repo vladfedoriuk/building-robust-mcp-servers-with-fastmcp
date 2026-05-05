@@ -153,36 +153,42 @@ layout: two-cols
 ````md magic-move
 ```python
 # Traditional providers (GitHub, Google, Azure)
-create_app(auth=OAuthProxy(
-    client_id="...",
-    client_secret="...",
-    authorization_url="https://github.com/login/oauth/authorize",
-    token_url="https://github.com/login/oauth/access_token",
-    base_url="https://api.yourco.com",
-))
+create_app(
+    auth=OAuthProxy(
+        client_id="...",
+        client_secret="...",
+        authorization_url="https://github.com/login/oauth/authorize",
+        token_url="https://github.com/login/oauth/access_token",
+        base_url="https://api.yourco.com",
+    )
+)
 ```
 ```python
 # DCR-capable providers (WorkOS, Descope)
-create_app(auth=RemoteAuthProvider(
-    token_verifier=JWTVerifier(
-        jwks_uri="https://idp.co/jwks.json",
-        issuer="https://idp.co",
-    ),
-    authorization_servers=["https://idp.co"],
-    base_url="https://api.yourco.com",
-))
+create_app(
+    auth=RemoteAuthProvider(
+        token_verifier=JWTVerifier(
+            jwks_uri="https://idp.co/jwks.json",
+            issuer="https://idp.co",
+        ),
+        authorization_servers=["https://idp.co"],
+        base_url="https://api.yourco.com",
+    )
+)
 ```
 ```python
 # Tests & local dev
-create_app(auth=StaticTokenVerifier(
-    tokens={
-        "dev-alice-token": {
-            "client_id": "alice@example.com",
-            "scopes": ["read:data", "write:data"],
+create_app(
+    auth=StaticTokenVerifier(
+        tokens={
+            "dev-alice-token": {
+                "client_id": "alice@example.com",
+                "scopes": ["read:data", "write:data"],
+            },
         },
-    },
-    required_scopes=["read:data"],
-))
+        required_scopes=["read:data"],
+    )
+)
 # Authorization: Bearer dev-alice-token
 ```
 ````
@@ -256,9 +262,7 @@ def create_app(
     mcp_path: str = "/mcp",
 ) -> FastAPI:
     http_app = fastmcp_app.http_app(path=mcp_path, stateless_http=True)
-    fastapi_app = FastAPI(
-        lifespan=combine_lifespans(lifespan, http_app.lifespan)
-    )
+    fastapi_app = FastAPI(lifespan=combine_lifespans(lifespan, http_app.lifespan))
     fastapi_app.mount(mount_prefix, http_app)
     return fastapi_app
 ```
@@ -321,11 +325,12 @@ layout: two-cols
 
 # Feature Modules Don't Know FastMCP Exists
 
-<div style="zoom: 0.85">
+<div style="zoom: 0.8">
 
-```python {none|1-8|11-16|19-24}
+```python {none|1-9|11-20|19-26}
 # customers/tools.py — no FastMCP import
 from fastmcp.dependencies import Depends
+
 
 async def search_customers(
     query: CustomerSearchQuery,
@@ -338,6 +343,7 @@ async def search_customers(
 from fastmcp.tools import Tool
 from customers.tools import search_customers
 
+
 def register_tools(app: FastMCP) -> None:
     app.add_tool(Tool.from_function(search_customers))
 
@@ -345,7 +351,7 @@ def register_tools(app: FastMCP) -> None:
 # create_app — the app reaches into modules, not the other way
 def create_app(auth: AuthProvider) -> FastMCP:
     app = FastMCP(...)
-    register_tools(app)      # app pulls from modules
+    register_tools(app)  # app pulls from modules
     register_resources(app)
     return app
 ```
@@ -405,7 +411,7 @@ class CreateCustomerInput(BaseModel):
 class CustomerCreated(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", from_attributes=True)
 
-    customer_id: CustomerId   # Annotated[str, AfterValidator(format_customer_id)]
+    customer_id: CustomerId  # Annotated[str, AfterValidator(format_customer_id)]
     email: EmailStr
     display_name: str
     country: CountryAlpha2
@@ -527,7 +533,7 @@ layout: two-cols
 
 # `Depends` Alone Is Not Enough — Use a Registry
 
-<div style="zoom: 0.66">
+<div style="zoom: 0.65">
 
 ```python {none|1-5|8-15|18-30}
 # dependency provider — resolves from svcs registry
@@ -865,14 +871,13 @@ layout: two-cols
 
 # Tool Selection Is a Classification Problem
 
-A refund workflow eval scored **60% pass rate**. Fixing tool descriptions only — no code changes — brought it to **100%**.
 
 <div class="mt-5 text-xs flex flex-col gap-2.5">
 
-<div><span class="font-bold text-blue-400">Accuracy</span> <span class="text-gray-400 font-mono">passes / total runs</span> — overall health.</div>
-<div><span class="font-bold text-green-400">TPR / Recall</span> <span class="text-gray-400 font-mono">correct / expected</span> — discoverability. Low TPR = model skips the tool entirely.</div>
-<div><span class="font-bold text-red-400">FPR</span> <span class="text-gray-400 font-mono">wrong calls / not expected</span> — over-triggering. Tool bleeds into unrelated intents.</div>
-<div><span class="font-bold text-yellow-400">Precision</span> <span class="text-gray-400 font-mono">correct / all calls</span> — correct usage ratio. Low = confused with sibling tools.</div>
+<div><span class="font-bold text-blue-400">Accuracy </span> <span class="text-gray-400 font-mono">passes / total runs</span> — overall health.</div>
+<div><span class="font-bold text-green-400">TPR / Recall </span> <span class="text-gray-400 font-mono">correct / expected</span> — discoverability. Low TPR = model skips the tool entirely.</div>
+<div><span class="font-bold text-red-400">FPR </span> <span class="text-gray-400 font-mono">wrong calls / not expected</span> — over-triggering. Tool bleeds into unrelated intents.</div>
+<div><span class="font-bold text-yellow-400">Precision </span> <span class="text-gray-400 font-mono">correct / all calls</span> — correct usage ratio. Low = confused with sibling tools.</div>
 
 </div>
 
@@ -1019,23 +1024,23 @@ case = Case(
 </div>
 <div class="text-xs flex flex-col gap-2 pt-1">
 
-**Fake facades** — deterministic, cheap, no side effects. Measure descriptions and reasoning, not the network.
+**Fake facades** — deterministic, cheap, no side effects. Measure descriptions and reasoning, not the infrastructure.
 
 <v-click at="1">
 
-**Controlled world** — the agent sees only what the facade exposes. Removes ambiguity about which tool to call.
+**Controlled world** — the agent sees only what the facade exposes. Removes ambiguity and ensures deterministic system state.
 
 </v-click>
 
 <v-click at="2">
 
-**pydantic-ai + FastMCP** — pass a server instance or a `Client`. No adapter layer.
+**pydantic-ai + FastMCP** — pass a server instance or a `Client`.
 
 </v-click>
 
 <v-click at="3">
 
-**Assert argument extraction** — `customer_id` must come from the search result, not the prompt. That's the reasoning you're measuring.
+**Assert argument extraction, tools called, gather metrics** — `customer_id` must come from the search result, not the prompt. The tools must be called in the exact same order.
 
 </v-click>
 
@@ -1053,6 +1058,6 @@ layout: cover
 
 # Thank You
 
-<div class="mt-10 text-sm text-gray-400">
+<div class="mt-10 pl-2 text-sm text-gray-400">
   Vladyslav Fedoriuk
 </div>
