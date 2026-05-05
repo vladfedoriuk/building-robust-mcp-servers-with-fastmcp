@@ -32,12 +32,16 @@
 
 ### Slide 2: MCP Servers Are APIs for Models
 
-- [ ] Core assertion: "Remote MCP servers are APIs where the primary consumer is a model, not a human-written client."
-- [ ] Compare familiar REST APIs with MCP JSON-RPC under an HTTP endpoint.
-- [ ] Mention the useful GraphQL analogy: one endpoint, structured operations, typed contract.
-- [ ] Mention that `/mcp` is conventional, not magical; the endpoint path is an app decision.
-- [ ] Use one visual: client/model -> HTTP -> JSON-RPC -> server tools/resources.
-- [ ] Avoid deep MCP protocol details here; keep this as the framing slide.
+- [ ] Core assertion: "REST → GraphQL → MCP: each step unified the interface and raised the abstraction level. The model replaces the human client."
+- [ ] Tell the evolution story in three steps:
+  - **REST**: many URLs, HTTP verbs carry intent, human-written clients.
+  - **GraphQL**: one URL, typed operations, structured contract — closer in spirit.
+  - **MCP**: one URL, JSON-RPC 2.0, model as the primary consumer.
+- [ ] Demystify the transport: a remote MCP call is a plain `POST /mcp` with a JSON-RPC 2.0 body. No new protocol magic.
+- [ ] Show a concrete JSON-RPC request snippet (`tools/call`) on the right column so the audience can see the wire format immediately.
+- [ ] State explicitly: `/mcp` is a community convention, not a spec requirement. The endpoint path is an app decision.
+- [ ] Use `two-cols` layout: evolution narrative on the left (with `v-click` reveal per bullet), JSON-RPC snippet on the right.
+- [ ] Keep speaker notes focused on the framing: the only real change from REST/GraphQL is *who* is on the other end — a model, not a human client. That shift is what makes architecture matter.
 
 ### Slide 3: Make FastMCP Feel Like FastAPI/Flask
 
@@ -468,36 +472,44 @@ class ProcessRefundInput(BaseModel):
 - [ ] Speaker note: The server orchestrates multiple APIs behind this one tool, preventing LLM chaining failures.
 - [ ] Layout: Default (Title and Content)
 
-### Slide 14: Agent Evaluation Strategy: Knowing When Tools Fail
+### Slide 14: Agent Evaluation Strategy: Tool Ergonomics as a Science
 
-- [ ] Core assertion: "Offline evaluation treats tool selection as a multi-label classification problem to catch regressions safely."
-- [ ] Cite GitHub's framework: Just like GitHub evaluates Copilot's MCP servers, we must measure performance before shipping updates. Reference: *Measuring what matters: How offline evaluation of GitHub MCP Server works*.
-- [ ] Explain the metrics with concrete examples:
-  - **Precision:** Did the model hallucinate calling this tool? Example: calling `delete_repo` when asked to simply `list_repos`. (False Positives highlight dangerously confusing tool descriptions).
-  - **Recall:** Did the model miss calling this tool when it should have? Example: attempting to write a Python script to fetch data instead of using the specifically provided `fetch_data_api` tool. (False Negatives highlight missing contextual associations in the prompt).
-  - **Accuracy & F1-Score:** Overall intent-matching reliability across your toolset.
-- [ ] Include a Confusion Matrix visual: Show how models get confused between overlapping intents. Example: GitHub found frequent semantic overlap between tools like `search_issues` and `list_issues` when the tool descriptions weren't mutually exclusive.
-- [ ] Speaker note: "You won't know if your shiny new tool breaks existing prompt workflows unless you evaluate intent matching offline. A confusion matrix reveals exactly which tools are battling for the LLM's attention, enabling precise description adjustments."
+- [ ] Core assertion: "Tool ergonomics — writing descriptions that models understand — is measurable. Treat tool selection as a multi-label classification problem."
+- [ ] Introduce the concept of **tool ergonomics** (MCPJam): designing tool names, descriptions, and parameters so a model knows exactly when and how to call them. Small wording changes can dramatically shift LLM behavior.
+- [ ] Lead with the Neon real-world proof point: Neon's MCP server started at a 60% pass rate on their migration workflow evals. By tweaking tool descriptions alone — no code changes — they reached 100%. Reference: *Writing Test Evals For Our MCP Server (Neon)*.
+- [ ] Explain the four ML classification metrics (MCPJam) with concrete examples:
+  - **Accuracy:** Overall pass rate across all eval cases — the headline health metric for your server.
+  - **TPR / Recall** (tool discoverability): `correctly called / total times expected`. Low TPR means the tool is described poorly and the model cannot find it. Example: the model writes a Python script to fetch data instead of using the provided `fetch_data_api` tool.
+  - **FPR** (over-triggering): `called when not expected / total runs where it shouldn't be called`. High FPR means the description is too generic and the tool bleeds into unrelated intents. Example: `delete_repo` being called when the user only said "tell me about my repos."
+  - **Precision** (correct usage ratio): `correct uses / all uses`. Low precision means the tool is overused or confused with sibling tools.
+- [ ] Include a Confusion Matrix visual: Show how models get confused between overlapping intents. Example: GitHub found frequent semantic overlap between tools like `search_issues` and `list_issues` when tool descriptions were not mutually exclusive.
+- [ ] Speaker note: "A confusion matrix reveals exactly which tools are battling for the LLM's attention. High FPR on a destructive tool is a safety issue, not just a quality issue. Precise description adjustments — not code changes — are often the fix."
 - [ ] Layout: Default (Title and Content)
 
 ### Slide 15: Deep Dive: The Evaluation Pipeline
 
-- [ ] Core assertion: "Automated model graders scale, but human transcript reviews catch subtle behavioral regressions."
-- [ ] Cite Anthropic: "Demystifying evals for AI agents" emphasizes that while model graders (LLM-as-a-judge) are fast, human transcript reviews are essential. Why? Because an agent might technically reach the correct final state, but take inefficient, bizarre, or unsafe steps to get there.
+- [ ] Core assertion: "Combine LLM-as-a-judge with deterministic side-effect checks; run multiple trials because LLMs are not deterministic."
+- [ ] Cite Anthropic: "Demystifying evals for AI agents" emphasizes that while model graders (LLM-as-a-judge) are fast, human transcript reviews are essential. An agent might technically reach the correct final state but take inefficient, bizarre, or unsafe steps to get there.
+- [ ] Explain the two complementary scorer types (from Neon's open-source eval implementation):
+  - **LLM-as-a-judge** (`factualityAnthropic`): Uses a separate LLM to compare the agent's actual output against the expected outcome. Handles non-deterministic phrasing — it does not require an exact string match; it scores semantic equivalence. Uses `useCoT: true` to make the grader's reasoning inspectable.
+  - **Deterministic side-effect check** (`mainBranchIntegrityCheck`): After the agent runs, a script directly verifies the state of the system — in Neon's case, `pg_dump` is run before and after to assert the production branch was not modified by a prepare-only migration step. No LLM involved; the check is a hard pass/fail.
+- [ ] Explain why multiple trials matter: Because LLMs are non-deterministic, a single run is not a reliable signal. Neon uses `trialCount: 20` with `maxConcurrency: 2`. This gives a statistical pass rate rather than a single binary result.
 - [ ] Include the GitHub three-stage evaluation cycle:
   1. **Fulfillment:** The agent runs against a deterministic scenario.
   2. **Evaluation:** Graders score the output (Did it select the right tool? Did it parse the right arguments?).
   3. **Summarization:** Aggregate metrics (like F1-score) are generated across thousands of test runs.
-- [ ] Explain tracking argument correctness (GitHub): Go beyond simply "did it pick the right tool". Measure **Exact Value Matches** (did it pass `customer_id=123` correctly?) and **Hallucinations** (did it invent an argument or identifier that wasn't in the context window?).
-- [ ] State the tradeoff clearly (Merge.dev): Balance "Hit Rate" (Tool Coverage: out of 100 relevant queries, how often did it use the expected tool?) against "Success Rate" (Execution Reliability: out of those 100 tool calls, how many actually succeeded without throwing a server exception?). Reference: *Merge.dev - How to test MCP servers effectively*.
-- [ ] Speaker note: "Don't just trust automated graders. Look up and read the transcripts yourself. Tracking both Hit Rate and Success Rate tells you if your tool is undiscoverable by the LLM, or if it is discovered but fundamentally broken."
+- [ ] Explain tracking argument correctness (GitHub): Go beyond "did it pick the right tool". Measure **Exact Value Matches** (did it pass `customer_id=123` correctly?) and **Hallucinations** (did it invent an argument that was not in the context window?).
+- [ ] State the tradeoff clearly (Merge.dev): Balance "Hit Rate" (Tool Coverage: out of 100 relevant queries, how often did it use the expected tool?) against "Success Rate" (Execution Reliability: out of those 100 tool calls, how many actually succeeded without throwing a server exception?).
+- [ ] Speaker note: "Run evals across multiple models (MCPJam). Your MCP server serves Claude, GPT-4o, and Gemini simultaneously. A tool that works well on one model may have low TPR on another. Cross-model performance is part of production readiness, not an afterthought."
+- [ ] Speaker note: "Don't just trust automated graders. Read the transcripts yourself. Tracking both Hit Rate and Success Rate tells you whether your tool is undiscoverable or fundamentally broken."
 - [ ] Layout: Default (Title and Content)
 
 ### Slide 16: Pydantic AI & Evals: Testing with Facades
 
-- [ ] Core assertion: "Use the established `svcs` registry pattern to securely inject faked facades, safely verifying our server behavior locally."
+- [ ] Core assertion: "Use the established `svcs` registry pattern to inject fake facades, making evals deterministic and safe to run at scale."
 - [ ] Cite Pydantic: Use `pydantic-evals` alongside `FastMCPToolset` to build scalable, code-first offline test suites. Reference: *Pydantic Evals Documentation*.
-- [ ] Explain the reasoning: Real APIs are too brittle, slow, or destructive for running thousands of automated evals. By injecting a fake Domain Facade using `svcs`, we guarantee entirely deterministic, fast testing environments that measure the prompt and tool definitions, not network latency.
+- [ ] Explain the reasoning: Real APIs are too brittle, slow, or destructive for running thousands of automated evals. By injecting a fake Domain Facade using `svcs`, we guarantee deterministic, fast testing environments that measure the prompt and tool definitions — not network latency or external state.
+- [ ] Connect to Neon's lesson: their stateful migration workflow (`prepare_database_migration` → `complete_database_migration`) was the hardest case to eval because the LLM could bypass it and use `run_sql` directly. Deterministic facade injection eliminates that ambiguity — the fake service only exposes exactly the workflow being tested.
 - [ ] Include this code snippet highlighting the dependency injection evaluation pattern:
 
 ```python
@@ -509,11 +521,11 @@ import svcs
 # 1. Inject a fake facade using the svcs registry (just like in tests)
 registry = svcs.Registry()
 fake_service = FakeCustomerService()
-fake_service.with_example_customer(
+fake_service.with_customer(
     customer_id="CUS-123-456",
     name="John Doe",
 )
-fake_service.with_example_invoice(
+fake_service.with_invoice(
     invoice_id="INV-2024-88",
     customer_id="CUS-123-456",
     amount=100.0,
@@ -527,7 +539,7 @@ toolset = FastMCPToolset(fastmcp_app)
 agent = Agent(model="openai:gpt-4o", toolsets=[toolset])
 
 # 3. Benchmark multi-step reasoning and tool chaining
-case = MCPEvalCase(
+case = Case(
     input="Refund John Doe for the recent outage. His invoice is INV-2024-88.", 
     expected_tools=[
         ToolCall(
@@ -537,7 +549,7 @@ case = MCPEvalCase(
         ToolCall(
             name="process_customer_refund", 
             args={
-                "customer_id": "CUS-123-456",  # Agent must accurately extract this from the search tool's response!
+                "customer_id": "CUS-123-456",  # Agent must extract this from search result
                 "invoice_id": "INV-2024-88",
                 "reason": "service_outage",
             }
@@ -546,7 +558,7 @@ case = MCPEvalCase(
 )
 ```
 
-- [ ] Speaker note: "By mocking with svcs, we evaluate end-to-end AI reasoning flows and parameter hallucination without risking real production operations, ensuring our evals are perfectly deterministic, significantly cheaper, and incredibly fast."
+- [ ] Speaker note: "By mocking with svcs, we evaluate end-to-end AI reasoning flows and parameter hallucination without risking real production operations, ensuring evals are perfectly deterministic, significantly cheaper, and fast. This is the same principle Neon used — isolate what you are measuring: the tool descriptions and LLM reasoning, not the network or the database."
 - [ ] Layout: Default (Title and Content)
 
 ## Cut If Time Is Tight

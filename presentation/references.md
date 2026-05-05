@@ -1,8 +1,18 @@
 # Presentation References
 
+## MCP Protocol
+
+- [What is the Model Context Protocol (MCP)?](https://modelcontextprotocol.io/docs/getting-started/intro): official intro — MCP as a USB-C port for AI, how it connects agents to tools/resources/data, and broad ecosystem support (Claude, ChatGPT, Cursor, VS Code).
+- [MCP Spec: Streamable HTTP Transport (2025-11-25)](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#streamable-http): the current remote transport spec — single MCP endpoint accepting POST (JSON-RPC call) and GET (SSE stream), session management via `MCP-Session-Id`, `MCP-Protocol-Version` header requirement, resumability via `Last-Event-ID`, and security requirements (Origin validation, auth).
+- [MCP Spec: Tools (2025-11-25)](https://modelcontextprotocol.io/specification/2025-11-25/server/tools): tools are model-controlled; `tools/list` for discovery, `tools/call` for invocation; `inputSchema` / `outputSchema` as JSON Schema; two error levels (protocol errors vs. tool execution errors with `isError: true`); `listChanged` capability for dynamic tool updates.
+
 ## FastMCP Docs
 
 - [Static Token Verification](https://gofastmcp.com/servers/auth/token-verification#static-token-verification): development and testing auth with predefined bearer tokens and claims.
+- [StaticTokenVerifier SDK Reference](https://gofastmcp.com/python-sdk/fastmcp-server-auth-providers-jwt#statictokenverifier): maps static bearer token strings to client claims; for dev and testing only — never production.
+- [Remote OAuth (RemoteAuthProvider)](https://gofastmcp.com/servers/auth/remote-oauth): integrates FastMCP with DCR-capable identity providers (WorkOS, Descope, modern OIDC); fully automated client registration flow.
+- [OAuth Proxy (OAuthProxy)](https://gofastmcp.com/servers/auth/oauth-proxy): bridges MCP's DCR expectations to traditional OAuth providers that require pre-registered credentials (GitHub, Google, Azure, AWS, Discord).
+- [Google OAuth Integration](https://gofastmcp.com/integrations/google): step-by-step guide for securing a FastMCP server with Google OAuth via the `OAuthProxy` / `GoogleProvider` pattern.
 - [Server Configuration Reference](https://gofastmcp.com/servers/server?search=StaticTokenVerify#configuration-reference): `FastMCP` constructor options including auth, middleware, duplicate handling, and error masking.
 - [Tool Error Handling](https://gofastmcp.com/servers/tools#error-handling): how tool exceptions are logged, converted to MCP errors, and masked with `mask_error_details`.
 - [HTTP Deployment](https://gofastmcp.com/deployment/http): HTTP transport deployment, lifespan requirements, sessions, streaming, and scaling caveats.
@@ -47,9 +57,14 @@
 - [Pydantic Field Customizing JSON Schema](https://pydantic.dev/docs/validation/2.9/concepts/fields/#customizing-json-schema)
 - [Pydantic Model-Level JSON Schema Customization](https://pydantic.dev/docs/validation/2.9/concepts/json_schema#model-level-customization)
 
+## Tool Design Examples
+- [Square MCP Server](https://github.com/square/square-mcp-server) — 3-tool pattern (`get_service_info`, `get_type_info`, `make_api_request`) covering all of Square's API; concrete example of phased tool exposure.
+
 ## Evaluation Strategy
 - [Measuring what matters: How offline evaluation of GitHub MCP Server works](https://github.blog/ai-and-ml/generative-ai/measuring-what-matters-how-offline-evaluation-of-github-mcp-server-works/)
 - [Demystifying evals for AI agents (Anthropic)](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)
 - [How to test MCP servers effectively (Merge.dev)](https://www.merge.dev/blog/mcp-server-testing)
+- [Writing Test Evals For Our MCP Server (Neon)](https://neon.com/blog/test-evals-for-mcp): real-world case study using Braintrust and LLM-as-a-judge; shows how improving tool descriptions alone moved pass rate from 60% to 100%. Covers stateful workflow evals, deterministic side-effect checks (`mainBranchIntegrityCheck`), and multi-trial runs for non-deterministic LLM outputs.
+- [Evaluating MCP servers — a quick guide (MCPJam)](https://www.mcpjam.com/blog/mcp-evals): introduces "tool ergonomics" as a measurable discipline; defines the four classification metrics for MCP eval analysis — Accuracy, TPR/Recall (discoverability), FPR (over-triggering), and Precision (correct usage ratio). Also covers cross-model performance testing.
 - [FastMCP Client Documentation (Pydantic)](https://pydantic.dev/docs/ai/mcp/fastmcp-client/)
 - [Pydantic Evals Documentation](https://pydantic.dev/docs/ai/evals/evals/)
