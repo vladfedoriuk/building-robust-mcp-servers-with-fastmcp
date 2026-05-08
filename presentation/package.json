@@ -5,7 +5,9 @@
   "scripts": {
     "build": "slidev build",
     "dev": "slidev --open",
-    "export": "slidev export"
+    "export": "slidev export",
+    "deploy": "slidev build && wrangler pages deploy dist --project-name=building-robust-mcp-slides",
+    "deploy:no-notes": "slidev build --without-notes && wrangler pages deploy dist --project-name=building-robust-mcp-slides"
   },
   "dependencies": {
     "@slidev/cli": "^52.15.0",
@@ -13,5 +15,8 @@
     "@slidev/theme-seriph": "latest",
     "slidev-theme-geist": "^0.8.1",
     "vue": "^3.5.33"
+  },
+  "devDependencies": {
+    "wrangler": "^4.90.0"
   }
 }
