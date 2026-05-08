@@ -38,8 +38,7 @@ layout: default
 <div class="grid grid-cols-2 gap-12 mt-4">
 <div>
 
-Each generation solved a different design problem:
-
+As web requirements have evolved, so have our methods of integration.
 <v-clicks>
 
 - **REST** — resource-centric CRUD; client knows the URL tree; server owns state
@@ -252,7 +251,7 @@ graph LR
     LB --> W3[Worker 3]
 ```
 
-<div style="zoom: 0.7">
+<div style="zoom: 0.65">
 
 ```python
 def create_app(
@@ -590,7 +589,7 @@ async def test_create_customer(
 
 <v-click at="3">
 
-**Tests swap implementations** — `registry.register_value(CustomerService, fake)` replaces the real service for the entire call; evals run offline with no live dependencies.
+**Tests swap implementations** — `registry.register_value(CustomerService, fake)` replaces the real service for the entire call; tests run offline with no live dependencies.
 
 </v-click>
 
